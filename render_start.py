@@ -20,5 +20,5 @@ if __name__ == '__main__':
         host='0.0.0.0',
         port=port,
         debug=False,  # Always False in production
-        log_output=True
+        allow_unsafe_werkzeug=True  # Required for production deployment
     )
