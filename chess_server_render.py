@@ -16,7 +16,7 @@ class ServerGameState:
         self.player_white = player_white
         self.player_black = player_black
         self.game_status = "waiting"
-        self.turn_step = 0  # 0-white turn, 2-black turn
+        self.white_turn = True  # True = white's turn, False = black's turn
         self.move_count = 0
         self.winner = ""
         self.game_over = False
@@ -39,7 +39,7 @@ class ServerGameState:
             'player_white': self.player_white,
             'player_black': self.player_black,
             'game_status': self.game_status,
-            'turn_step': self.turn_step,
+            'white_turn': self.white_turn,
             'move_count': self.move_count,
             'winner': self.winner,
             'game_over': self.game_over,
@@ -50,7 +50,7 @@ class ServerGameState:
         }
     
     def get_current_player(self):
-        return 'white' if self.turn_step < 2 else 'black'
+        return 'white' if self.white_turn else 'black'
     
     def is_valid_move_basic(self, from_pos, to_pos, player):
         """Basic move validation"""
@@ -135,12 +135,12 @@ def handle_find_game():
     if waiting_players and waiting_players[0] != player_name:
         opponent = waiting_players.pop(0)
         
-        # Create new game
+        # Create new game - waiting player should be white, finding player should be black
         game_id = str(uuid.uuid4())
         game = ServerGameState(
             game_id=game_id,
-            player_white=player_name,
-            player_black=opponent
+            player_white=opponent,
+            player_black=player_name
         )
         game.game_status = 'active'
         
@@ -198,9 +198,33 @@ def handle_make_move(data):
     to_pos = tuple(data['to_pos'])
     
     if game.is_valid_move_basic(from_pos, to_pos, player_name):
+        # Actually update the piece positions in game state
+        if current_player == 'white':
+            # Find and update white piece position
+            if from_pos in game.white_locations:
+                piece_index = game.white_locations.index(from_pos)
+                game.white_locations[piece_index] = to_pos
+        else:
+            # Find and update black piece position
+            if from_pos in game.black_locations:
+                piece_index = game.black_locations.index(from_pos)
+                game.black_locations[piece_index] = to_pos
+        
+        # Check for captures
+        if current_player == 'white' and to_pos in game.black_locations:
+            # White captures black piece
+            captured_index = game.black_locations.index(to_pos)
+            game.black_locations.pop(captured_index)
+            game.black_pieces.pop(captured_index)
+        elif current_player == 'black' and to_pos in game.white_locations:
+            # Black captures white piece
+            captured_index = game.white_locations.index(to_pos)
+            game.white_locations.pop(captured_index)
+            game.white_pieces.pop(captured_index)
+        
         # Update game state
         game.move_count += 1
-        game.turn_step = (game.turn_step + 2) % 4  # Switch turns
+        game.white_turn = not game.white_turn  # Switch turns
         
         # Broadcast move
         move_data = {
