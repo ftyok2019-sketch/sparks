@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: chess-multiplayer-server
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python render_start.py
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
