@@ -94,10 +94,15 @@ def handle_disconnect():
             game_id = player_games[player_name]
             if game_id in active_games:
                 game = active_games[game_id]
-                game.game_status = 'paused'
+                
+                # Notify other player about disconnection
                 socketio.emit('player_disconnected', 
-                            {'player': player_name, 'game_status': 'paused'}, 
+                            {'player': player_name, 'game_status': 'ended', 'reason': 'disconnect'}, 
                             room=game_id)
+                
+                # Clean up the game completely
+                print(f"Cleaning up game {game_id} due to player {player_name} disconnect")
+                cleanup_game(game_id)
         
         del player_sessions[session_id]
         if player_name in player_games:
@@ -275,6 +280,38 @@ def home():
     <p>Active games: {len(active_games)}</p>
     <p>Connected players: {len(player_sessions)}</p>
     <p>Waiting players: {len(waiting_players)}</p>
+    <p><a href="/status">Detailed Status</a></p>
+    <p><a href="/cleanup">Emergency Cleanup</a></p>
+    """
+
+@app.route('/status')
+def status():
+    return f"""
+    <h1>Server Status</h1>
+    <h2>Active Games ({len(active_games)})</h2>
+    <pre>{active_games}</pre>
+    <h2>Player Sessions ({len(player_sessions)})</h2>
+    <pre>{player_sessions}</pre>
+    <h2>Player Games ({len(player_games)})</h2>
+    <pre>{player_games}</pre>
+    <h2>Waiting Players ({len(waiting_players)})</h2>
+    <pre>{waiting_players}</pre>
+    """
+
+@app.route('/cleanup')
+def emergency_cleanup():
+    global active_games, player_sessions, player_games, waiting_players
+    
+    # Clear everything
+    active_games.clear()
+    player_sessions.clear()
+    player_games.clear()
+    waiting_players.clear()
+    
+    return """
+    <h1>Emergency Cleanup Complete</h1>
+    <p>All games and sessions have been cleared.</p>
+    <p><a href="/">Back to Home</a></p>
     """
 
 if __name__ == '__main__':
