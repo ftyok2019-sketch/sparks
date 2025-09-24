@@ -198,42 +198,22 @@ def handle_make_move(data):
     to_pos = tuple(data['to_pos'])
     
     if game.is_valid_move_basic(from_pos, to_pos, player_name):
-        # Actually update the piece positions in game state
-        if current_player == 'white':
-            # Find and update white piece position
-            if from_pos in game.white_locations:
-                piece_index = game.white_locations.index(from_pos)
-                game.white_locations[piece_index] = to_pos
-        else:
-            # Find and update black piece position
-            if from_pos in game.black_locations:
-                piece_index = game.black_locations.index(from_pos)
-                game.black_locations[piece_index] = to_pos
-        
-        # Check for captures
-        if current_player == 'white' and to_pos in game.black_locations:
-            # White captures black piece
-            captured_index = game.black_locations.index(to_pos)
-            game.black_locations.pop(captured_index)
-            game.black_pieces.pop(captured_index)
-        elif current_player == 'black' and to_pos in game.white_locations:
-            # Black captures white piece
-            captured_index = game.white_locations.index(to_pos)
-            game.white_locations.pop(captured_index)
-            game.white_pieces.pop(captured_index)
-        
-        # Update game state
+        # Update game state (simple counters, not piece tracking)
         game.move_count += 1
         game.white_turn = not game.white_turn  # Switch turns
         
-        # Broadcast move
+        # Broadcast move to both players
         move_data = {
             'type': 'move_made',
-            'game_state': game.to_dict(),
-            'move': data
+            'from_pos': from_pos,
+            'to_pos': to_pos,
+            'player': player_name,
+            'current_player': game.get_current_player(),
+            'move_count': game.move_count,
+            'game_id': game_id
         }
         socketio.emit('move_update', move_data, room=game_id)
-        print(f"Move in game {game_id}: {from_pos} -> {to_pos}")
+        print(f"Move in game {game_id}: {player_name} moved {from_pos} -> {to_pos}")
     else:
         emit('error', {'message': 'Invalid move'})
 
